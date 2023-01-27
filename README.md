@@ -9,5 +9,6 @@ and DMRG. Codes are written in python.
 * Graph Heisenberg spin 
 * Density matrix from Heisenberg spin chain 
 * Reduced density matrix calculation from Heisenberg 1D spin chain 
+* Entropy of the corresponding subsytems 
 
 JJ 2022

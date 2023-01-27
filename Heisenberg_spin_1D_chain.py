@@ -1,3 +1,5 @@
+# version 1.0 for spin 1D chain diagonalization (max number of sites 8-10) using numpy 
+
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt 

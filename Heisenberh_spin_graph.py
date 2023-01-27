@@ -1,3 +1,8 @@
+# version 2.0 for spin 1D chain diagonalization (max number of sites 8-10) using numpy and:
+# -> calculating a density matrix
+# -> calculating a reduced density matrix of chain divided into two equal subsytems
+# -> calculating entropy of this subsystems
+####
 
 import numpy as np
 import matplotlib.pyplot as plt 
