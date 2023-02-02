@@ -95,31 +95,20 @@ class Heisenberg(object):
         self.chain_I = chain([np.identity(len(S)**(index))], [S], [np.identity(len(S)**(N - index))])
         return reduce(np.kron, self.chain_I)
     
-    def S_z_operator(self, adjMatrix):
-        
-        #przerobić S_z jakie sumownie SZ_1 + SZ_2 + do N !
-        '''
+    def S_z_operator(self):
+        #calculating S_z operator as sum S_z_1 + S_z_2 + ... + S_z_N
         S_z_operator = 0
-        for i in range(len(adjMatrix)):
-            for j in range(len(adjMatrix)):
-                if adjMatrix[j][i] == 1:
-                    S_z_operator += self.S_site(i, self.S_z)
-                    '''
-        
-        
-        S_z_operator = 0            
-        S_z_operator += np.kron(np.kron(self.S_z, np.kron(self.I,self.I)), self.I) \
-            + np.kron(np.kron(self.I, np.kron(self.S_z,self.I)), self.I) + \
-        np.kron(np.kron(self.I, np.kron(self.I,self.S_z)), self.I) + \
-            np.kron(np.kron(self.I, np.kron(self.I,self.I)), self.S_z)
-               
+        for i in range(self.size_of_system+1):
+            S_z_operator  += self.S_site(i, self.S_z)
+            
         return S_z_operator
+        
     
-    def calc_Sz(self, eigenvector, adjMatrix):
+    def calc_Sz(self, eigenvector):
         # Calculate the conjugate transpose of the eigenvector
         psi_dagger = np.conj(eigenvector.T)
         # Calculate the expectation value of S_z
-        Sz_total = np.dot(psi_dagger, np.dot(self.S_z_operator(adjMatrix), eigenvector))
+        Sz_total = np.dot(psi_dagger, np.dot(self.S_z_operator(), eigenvector))
         return Sz_total
     
     def eig_diagonalize(self,A):
@@ -164,6 +153,31 @@ class Heisenberg(object):
     def calculate_rho(self,n):
         # n -> is the interator over eigenvectors
         return np.kron(self.vectors[:,n],self.vectors[:,n].conj()).reshape(len(self.vectors[:,n]),len(self.vectors[:,n]))
+    
+    
+    def calculate_reduced_rho_sys(self,rho_big, spin, sites_in_subsystem): 
+        
+        number_of_states = int((2*spin + 1)**sites_in_subsystem)
+        rho_sys = np.zeros((number_of_states,number_of_states),dtype = complex)
+        #system 
+        for i in range(number_of_states):
+            j = i * number_of_states
+            for k in range(number_of_states):
+                rho_sys[k, i] = sum(rho_big[k * number_of_states + l, j + l] for l in range(number_of_states))
+            
+        return rho_sys
+    
+    def calculate_reduced_rho_env(self,rho_big, spin, sites_in_subsystem):
+        
+        number_of_states = int((2*spin + 1)**sites_in_subsystem)
+        rho_env = np.zeros((number_of_states,number_of_states),dtype = complex)
+        
+        #env   
+        for i in range(number_of_states):
+            for j in range(number_of_states):
+                rho_env[j,i] = sum(rho_big[j + l * number_of_states ,i + l * number_of_states] for l in range(number_of_states))
+        
+        return rho_env
     
     def calculate_reduced_rho_2_spin(self,rho_big):
         #system 3 spinów, liczymy dla rho_2 (traceout spin 1 i 3)
@@ -325,7 +339,7 @@ class Heisenberg(object):
         plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
         plt.close()
         
-    def plot_entropy(self, entropy, S_z_total_number, color, title, figsize, s, suffix):
+    def plot_entropy(self, entropy, color, title, figsize, s, suffix):
         # plotting - entropia dla odpowiedniej eigenenergii H 
         #entropy = self.normalization_of_entropy(entropy)
         
@@ -335,7 +349,7 @@ class Heisenberg(object):
         ax.margins(0.1)
         start, end = ax.get_ylim()
         ax.yaxis.set_ticks(np.arange(start, end, 0.05))
-        ax.set_ylim(bottom= -0.04, top = end-0.05)
+        #ax.set_ylim(bottom= -0.04, top = end-0.05)
         ax.set_xlabel('Energy')
         ax.set_ylabel('Entropy')
         ax.set_title(title)
@@ -402,84 +416,93 @@ def main(N,adjMatrix): #N+1 -> size of graph
     #S_z total of the System
     S_z_total = []
     for i in range(len(vectors)):
-        S_z_total.append(H.calc_Sz(vectors[:,i],adjMatrix))
-        #S_z_total.append(round(H.calc_Sz(np.around(vectors[:,i],2),subsystem = False),3))
+        S_z_total.append(H.calc_Sz(vectors[:,i]))
+    
     print("Not rounded S_z: ", S_z_total)
     print("rounded S_z: ", np.around(S_z_total,0))
     print("sum rounded S_z: ", sum(np.around(S_z_total,0)))
     print("energy: ", energies[0])
     print("vector: ", vectors[:,0])
     print("vector rounded: ", np.around(vectors[:,0],3))
+      
     
     
     #plots of energy bands 
     #H.plot_bands(title = "s=1, " + str(N+1) +" sites, graph", figsize=(10,12),s=100, ticks = False)
-    H.plot_bands(title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"_sites_chain")
-    H.plot_bands_with_s_z(np.around(S_z_total,0), title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
+    H.plot_bands(title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = False, suffix = str(N+1) +"_sites_chain")
+    #H.plot_bands_with_s_z(np.around(S_z_total,0), title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
     
     H.plot_s_z(S_z_total, color = 'dodgerblue', title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, suffix = str(N+1) +"_sites_Sz")
    
     #basis = H.calculate_basis()
     #print("Our basis is: ", basis)
     
-    '''
-            #S_z total of the System
-        S_z_total_subsystem = []
-        for i in range(len(vectors)):
-            S_z_total_subsystem.append(self.calc_Sz(vectors[i],subsystem = True))
-        S_z_total_subsystem = sum(S_z_total_subsystem)
-    '''
 
     entropy_all_system = []
     entropy_all_env = []
     
-    s_z_all_system = []
-    s_z_all_env = []
-    
     eigen_rho_env_all = []
     eigen_rho_sys_all = []
     
-    n_of_sites = 2
+    n_of_sites = 4
     
     for n in range(len(energies)):
+        #print("This is " + str(n) + " eigenvector :", np.around(vectors[:,n],3))
+        #print("This is " + str(n) + " S_z of the eigenvector :", np.around(S_z_total[n],1))
+        
         rho_big= H.calculate_rho(n)
+        
+        rho_sys = H.calculate_reduced_rho_sys(rho_big, spin = 1/2, sites_in_subsystem = n_of_sites)
+        rho_env = H.calculate_reduced_rho_env(rho_big, spin = 1/2, sites_in_subsystem = n_of_sites)
+        
         #rho_2 = H.calculate_reduced_rho_2_spin(rho_sys)
         #rho_env = H.calculate_reduced_rho_2_spin_env(rho_sys)
-        rho_sys = H.calculate_reduced_rho_4_spin_sys(rho_big)
-        rho_env = H.calculate_reduced_rho_4_spin_env(rho_big)
+        #rho_sys = H.calculate_reduced_rho_4_spin_sys(rho_big)
+        #rho_env = H.calculate_reduced_rho_4_spin_env(rho_big)
         
         if not .9999999999 <= np.trace(rho_sys) <= 1.000000001:
             print("Trace of the system: ", np.trace(rho_sys))
             print("Trace of the env: ", np.trace(rho_env))
             
-        entropy_sys, eigen_rho_sys = H.calculate_entropy(rho_sys,n_of_sites)
+        entropy_sys, eigen_rho_sys = H.calculate_entropy(rho_sys, n_of_sites)
         entropy_all_system.append(entropy_sys)
         #for lambdas from reduced density matrices
         eigen_rho_sys_all.append(eigen_rho_sys)
         
-        entropy_env, eigen_rho_env  = H.calculate_entropy(rho_env,n_of_sites)
+        entropy_env, eigen_rho_env  = H.calculate_entropy(rho_env, n_of_sites)
         entropy_all_env.append(entropy_env)
         #for lambdas from reduced density matrices
         eigen_rho_env_all.append(eigen_rho_env)
     
-    print("List of entropies :", entropy_all_system)
-    print("Max entropy: ", max(entropy_all_env))
-    print("List of entropies rounded :", np.around(entropy_all_system,1))
+    #print("List of entropies :", entropy_all_system)
+    #print("Max entropy: ", max(entropy_all_env))
+    #print("List of entropies rounded :", np.around(entropy_all_system,1))
 
-    H.plot_entropy(entropy_all_system, s_z_all_system, color = 'red', title = "s=1/2, " + str(N+1) +" sites, system ", figsize=(10,12),s=550, suffix = str(N+1) + "_sys_entropy")
-    H.plot_entropy(entropy_all_env, s_z_all_env, color = 'blue', title = "s=1/2, " + str(N+1) +" sites, environment ", figsize=(10,12),s=550, suffix = str(N+1) + "_env_entropy")
+    H.plot_entropy(entropy_all_system, color = 'red', title = "s=1/2, " + str(N+1) +" sites, system ", figsize=(10,12),s=550, suffix = str(N+1) + "_sys_entropy")
+    H.plot_entropy(entropy_all_env, color = 'blue', title = "s=1/2, " + str(N+1) +" sites, environment ", figsize=(10,12),s=550, suffix = str(N+1) + "_env_entropy")
     
     H.plot_lambdas_entropy(eigen_rho_env_all, color = 'black', title = "lambda, s=1/2, " + str(N+1) +" sites, env ", figsize=(10,12),s=400, suffix = str(N+1) + "_env_lambda")
     H.plot_lambdas_entropy(eigen_rho_sys_all, color = 'black', title = "lambda, s=1/2, " + str(N+1) +" sites, sys ", figsize=(10,12),s=400, suffix = str(N+1) + "_sys_lambda")
     
     
-    n = 1
     
-    rho_big= H.calculate_rho(n)
-    rho_sys=H.calculate_reduced_rho_4_spin_sys(rho_big)
-       
-    rho_big_try = H.calculate_rho(n)
     '''
+    n = 5
+    
+    rho_big_try = H.calculate_rho(n) 
+    
+    rho_sys=H.calculate_reduced_rho_4_spin_sys(rho_big_try)
+    rho_env=H.calculate_reduced_rho_4_spin_env(rho_big_try)
+    
+    rho_sys_check = H.calculate_reduced_rho_sys(rho_big_try, spin = 1/2, sites_in_subsystem = 2)
+    
+    rho_env_check = H.calculate_reduced_rho_env(rho_big_try, spin = 1/2, sites_in_subsystem = 2)
+    
+    print(rho_sys == rho_sys_check)
+    print(rho_env == rho_env_check)
+    
+    
+    
     #print(rho_big == rho_big_try)     
     rho_sys_try = np.zeros((4,4), dtype = complex)
     for N_try in range(16):
@@ -489,10 +512,9 @@ def main(N,adjMatrix): #N+1 -> size of graph
                 rho_sys_try[1][j_try] += rho_big_try[i_try + 4][N_try]
                 rho_sys_try[2][j_try] += rho_big_try[i_try + 8][N_try]
                 rho_sys_try[3][j_try] += rho_big_try[i_try + 12][N_try]
-    '''
-    '''
+    
+    rho_big_try = np.zeros((16,16),dtype = complex)
     rho_sys_try = np.zeros((4,4), dtype = complex)
-    j = 0
     for i in range(4):
         if i == 0:
             rho_sys_try[0,i] = rho_big_try[0,0] + rho_big_try[1,1] + rho_big_try[2,2] + rho_big_try[3,3]
@@ -520,32 +542,63 @@ def main(N,adjMatrix): #N+1 -> size of graph
             rho_sys_try[1,i] = rho_big_try[4,0+j] + rho_big_try[5,1+j] + rho_big_try[6,2+j] + rho_big_try[7,3+j]
             rho_sys_try[2,i] = rho_big_try[8,0+j] + rho_big_try[9,1+j] + rho_big_try[10,2+j] + rho_big_try[11,3+j]
             rho_sys_try[3,i] = rho_big_try[12,0+j] + rho_big_try[13,1+j] + rho_big_try[14,2+j] + rho_big_try[15,3+j]
-    '''
-    #rho_sys_try = np.zeros((4,4), dtype = complex)
-    
-    #for i in range(4):
-        #j = 4 * i
-        #for k in range(4):
-            #rho_sys_try[k, i] = sum(rho_big_try[k + 4 * l, j + l] for l in range(4))
             
-    rho_sys_try = np.zeros((4,4), dtype = complex)
+            
+    #env 
     
     for i in range(4):
-        j = 4 * i
-        for k in range(4):
-            rho_sys_try[k,i] = rho_big_try[k+4,0+j] + rho_big_try[k+4,1+j] + rho_big_try[k+4,2+j] + rho_big_try[k+4,3+j]
-    
-    #print("Its manual: \n", rho_sys)
-    #print("\n")
-    #print("It's loop version: \n", rho_sys_try)
-    
-    #print(rho_sys == rho_sys_try)
-    
-    
-    #for s_z 
-    s_z_all_system = sum(s_z_all_system).real
-    s_z_all_env = sum(s_z_all_env).real
+        if i == 0:
+            rho_env_try[0,i] = rho_big_try[0,0] + rho_big_try[4,4] + rho_big_try[8,8] + rho_big_try[12,12]
+            rho_env_try[1,i] = rho_big_try[1,0] + rho_big_try[5,4] + rho_big_try[9,8] + rho_big_try[13,12]
+            rho_env_try[2,i] = rho_big_try[2,0] + rho_big_try[6,4] + rho_big_try[10,8] + rho_big_try[14,12]
+            rho_env_try[3,i] = rho_big_try[3,0] + rho_big_try[7,4] + rho_big_try[11,8] + rho_big_try[15,12]
+            
+        if i == 1: 
+            j = 1
+            rho_env_try[0,i] = rho_big_try[0,0+j] + rho_big_try[4,4+j] + rho_big_try[8,8+j] + rho_big_try[12,12+j]
+            rho_env_try[1,i] = rho_big_try[1,0+j] + rho_big_try[5,4+j] + rho_big_try[9,8+j] + rho_big_try[13,12+j]
+            rho_env_try[2,i] = rho_big_try[2,0+j] + rho_big_try[6,4+j] + rho_big_try[10,8+j] + rho_big_try[14,12+j]
+            rho_env_try[3,i] = rho_big_try[3,0+j] + rho_big_try[7,4+j] + rho_big_try[11,8+j] + rho_big_try[15,12+j]
+            
+        if i == 2: 
+            j = 2
+            rho_env_try[0,i] = rho_big_try[0,0+j] + rho_big_try[4,4+j] + rho_big_try[8,8+j] + rho_big_try[12,12+j]
+            rho_env_try[1,i] = rho_big_try[1,0+j] + rho_big_try[5,4+j] + rho_big_try[9,8+j] + rho_big_try[13,12+j]
+            rho_env_try[2,i] = rho_big_try[2,0+j] + rho_big_try[6,4+j] + rho_big_try[10,8+j] + rho_big_try[14,12+j]
+            rho_env_try[3,i] = rho_big_try[3,0+j] + rho_big_try[7,4+j] + rho_big_try[11,8+j] + rho_big_try[15,12+j]
+            
+        if i == 3: 
+            j = 3
+            rho_env_try[0,i] = rho_big_try[0,0+j] + rho_big_try[4,4+j] + rho_big_try[8,8+j] + rho_big_try[12,12+j]
+            rho_env_try[1,i] = rho_big_try[1,0+j] + rho_big_try[5,4+j] + rho_big_try[9,8+j] + rho_big_try[13,12+j]
+            rho_env_try[2,i] = rho_big_try[2,0+j] + rho_big_try[6,4+j] + rho_big_try[10,8+j] + rho_big_try[14,12+j]
+            rho_env_try[3,i] = rho_big_try[3,0+j] + rho_big_try[7,4+j] + rho_big_try[11,8+j] + rho_big_try[15,12+j]
+            
+    rho_sys_try = np.zeros((4,4), dtype = complex)
+    rho_env_try = np.zeros((4,4), dtype = complex)
 
+    
+    #system 
+    for i in range(4):
+        j = i * 4
+        for k in range(4):
+            rho_sys_try[k, i] = sum(rho_big_try[k * 4 + l, j + l] for l in range(4))
+        
+    #env   
+    for i in range(4):
+        for j in range(4):
+            rho_env_try[j,i] = sum(rho_big_try[j + l * 4 ,i + l * 4] for l in range(4))
+            
+            
+    
+    print("Its manual: \n", rho_sys)
+    print("\n")
+    print("It's loop version: \n", rho_sys_try)
+    
+    print(rho_sys == rho_sys_try)
+    print("\n")
+    print(rho_env == rho_env_try)
+    '''
 
 if __name__ == '__main__':
 
@@ -570,11 +623,26 @@ if __name__ == '__main__':
     '''
     #adjMatrix = np.array([[0,1,0,0,0,0,0],[0,0,1,0,0,0,0],[0,0,0,1,0,0,0],[0,0,0,0,1,0,0],[0,0,0,0,0,1,0],[0,0,0,0,0,0,1],[1,0,0,0,0,0,0]])
     
-    adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
+    #in this code it's enough to define one "hopping", becasue the second one is already implemented in the code
+    # correct above note! 
+    #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
+    
+    #6 sites
+    #adjMatrix = np.array([[0,1,0,0,0,0],[0,0,1,0,0,0],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1],[1,0,0,0,0,0]])
+    
+    #8 sites
+    adjMatrix = np.eye(8, k=1, dtype=int)[::]
+    adjMatrix[-1][0] = 1
+    
+    #10 sites
+    #adjMatrix = np.eye(10, k=1, dtype=int)[::]
+    #adjMatrix[-1][0] = 1
+    
+    #12 sites
+    #adjMatrix = np.eye(12, k=1, dtype=int)[::]
+    #adjMatrix[-1][0] = 1
     
     #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0]])
-    #skoki pomiędzy
-    #adjMatrix = np.array([[0,1,0,0],[1,0,1,0],[0,1,0,1],[0,0,1,0]])
     
     main(len(adjMatrix) - 1, adjMatrix)
     print("Success")
