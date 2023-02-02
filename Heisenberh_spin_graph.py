@@ -56,7 +56,6 @@ class Heisenberg(object):
         self.possible_basis = []
         self.H = 0
         
-        """
         #matrices for S = 1
         
         self.S_plus = np.sqrt(2) * np.array([[0,1,0],
@@ -69,8 +68,12 @@ class Heisenberg(object):
         self. S_z = np.array([[1,0,0],
                     [0,0,0],
                     [0,0,-1]])
+        
         """
         
+        """
+        
+        '''
         #matrices for S = 1/2
         self.S_plus = np.array([[0,1],
                             [0,0]])
@@ -82,12 +85,14 @@ class Heisenberg(object):
                             [0,-1]])
         self.I = np.array([[1,0],
                           [0,1]])
+        '''
+        
         
         if directory is not None:
             self.directory = os.path.join('./', directory)
             os.makedirs(directory, exist_ok=True)
         else:
-            self.directory = './results/'
+            self.directory = './results/s_1'
 
     #Using tensor product to calculate S_i matrix
     def S_site(self, index, S):
@@ -429,8 +434,8 @@ def main(N,adjMatrix): #N+1 -> size of graph
     
     #plots of energy bands 
     #H.plot_bands(title = "s=1, " + str(N+1) +" sites, graph", figsize=(10,12),s=100, ticks = False)
-    H.plot_bands(title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = False, suffix = str(N+1) +"_sites_chain")
-    #H.plot_bands_with_s_z(np.around(S_z_total,0), title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
+    H.plot_bands(title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"_sites_chain")
+    H.plot_bands_with_s_z(np.around(S_z_total,0), title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
     
     H.plot_s_z(S_z_total, color = 'dodgerblue', title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, suffix = str(N+1) +"_sites_Sz")
    
@@ -452,8 +457,8 @@ def main(N,adjMatrix): #N+1 -> size of graph
         
         rho_big= H.calculate_rho(n)
         
-        rho_sys = H.calculate_reduced_rho_sys(rho_big, spin = 1/2, sites_in_subsystem = n_of_sites)
-        rho_env = H.calculate_reduced_rho_env(rho_big, spin = 1/2, sites_in_subsystem = n_of_sites)
+        rho_sys = H.calculate_reduced_rho_sys(rho_big, spin = 1, sites_in_subsystem = n_of_sites)
+        rho_env = H.calculate_reduced_rho_env(rho_big, spin = 1, sites_in_subsystem = n_of_sites)
         
         #rho_2 = H.calculate_reduced_rho_2_spin(rho_sys)
         #rho_env = H.calculate_reduced_rho_2_spin_env(rho_sys)
@@ -625,7 +630,11 @@ if __name__ == '__main__':
     
     #in this code it's enough to define one "hopping", becasue the second one is already implemented in the code
     # correct above note! 
+    #4 sites closed
     #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
+    
+    #4 sites open
+    #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0]])
     
     #6 sites
     #adjMatrix = np.array([[0,1,0,0,0,0],[0,0,1,0,0,0],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1],[1,0,0,0,0,0]])
