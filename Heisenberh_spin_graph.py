@@ -48,7 +48,7 @@ class Heisenberg(object):
     #Creating Heisenberg Hamiltonian 
 
     #Initialization of the system
-    def __init__(self,N, directory = None) -> None:
+    def __init__(self,N, S, directory = None) -> None:
         self.size_of_system = N
         self.chain_I = []
         self.energies = []
@@ -56,43 +56,33 @@ class Heisenberg(object):
         self.possible_basis = []
         self.H = 0
         
+        if S == 1:
         #matrices for S = 1
-        
-        self.S_plus = np.sqrt(2) * np.array([[0,1,0],
-                                    [0,0,1],
-                                    [0,0,0]])
+            self.S_plus = np.sqrt(2) * np.array([[0,1,0],
+                                            [0,0,1],
+                                            [0,0,0]])
 
-        self.S_minus = np.sqrt(2) * np.array([[0,0,0],
-                                    [1,0,0],
-                                    [0,1,0]])
-        self. S_z = np.array([[1,0,0],
-                    [0,0,0],
-                    [0,0,-1]])
+            self.S_minus = np.sqrt(2) * np.array([[0,0,0],
+                                            [1,0,0],
+                                            [0,1,0]])
+            self. S_z = np.array([[1,0,0],
+                            [0,0,0],
+                            [0,0,-1]])
         
-        """
         
-        """
-        
-        '''
-        #matrices for S = 1/2
-        self.S_plus = np.array([[0,1],
-                            [0,0]])
+        elif S == 1/2:
+            #matrices for S = 1/2
+            self.S_plus = np.array([[0,1],
+                                    [0,0]])
 
-        self.S_minus = np.array([[0,0],
-                            [1,0]])
+            self.S_minus = np.array([[0,0],
+                                    [1,0]])
         
-        self.S_z = 1/2* np.array([[1,0],
-                            [0,-1]])
-        self.I = np.array([[1,0],
-                          [0,1]])
-        '''
+            self.S_z = 1/2* np.array([[1,0],
+                                    [0,-1]])
+            self.I = np.array([[1,0],
+                                [0,1]])
         
-        
-        if directory is not None:
-            self.directory = os.path.join('./', directory)
-            os.makedirs(directory, exist_ok=True)
-        else:
-            self.directory = './results/s_1'
 
     #Using tensor product to calculate S_i matrix
     def S_site(self, index, S):
@@ -108,7 +98,6 @@ class Heisenberg(object):
             
         return S_z_operator
         
-    
     def calc_Sz(self, eigenvector):
         # Calculate the conjugate transpose of the eigenvector
         psi_dagger = np.conj(eigenvector.T)
@@ -286,142 +275,168 @@ class Heisenberg(object):
                 entropy += -(eigen_rho[i]*np.log(eigen_rho[i]))
         '''
         return entropy/(n*np.log(n)), eigen_rho
-  
-    def plot_bands(self, title, figsize, s, ticks, suffix):
-        
-        #Plotting energy bands with index
-        #title -> header of plot, 
-        #figsize -> size of figure, 
-        #s -> thickness of a band 
-        #ticks -> True for showing ticks on x axis 
-        x = list(range(len(self.energies)))
-        #energies_normalized = self.normalization_of_energies(self.energies)
-        fig, ax = plt.subplots(figsize=figsize)
-        ax.scatter(x, self.energies, c = 'black', s=s, marker="_", linewidth=5, zorder=3)
-        tick_spacing = 1
-        if ticks == False: 
-            ax.set_xticks([])
-        else:
-            ax.xaxis.set_major_locator(mpl.ticker.MultipleLocator(tick_spacing))
-        ax.grid(axis='y')
-        ax.margins(0.1)
-        ax.set_xlabel('index')
-        ax.set_ylabel('E')
-        ax.set_title(title)
-        
-        filename = 'bands_'
-        if suffix is not None:
-            filename += suffix
-        plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
-        plt.close()
-        
-        
-    def plot_bands_with_s_z(self, s_z_values, title, figsize, s, ticks, suffix):
     
-        x = list(range(len(self.energies)))
-        fig, ax = plt.subplots(figsize=figsize)
-        
-        ax.scatter(x, self.energies, c = 'black', s=s, marker="_", linewidth=5, zorder=3)
-        
-        for i, txt in enumerate(s_z_values):
-            ax.annotate(txt, (x[i], self.energies[i]), xytext = (x[i] - 0.2, self.energies[i] + 0.05))
-            ax.annotate("$S_z$", (x[i], self.energies[i]), xytext = (x[i] - 0.2, self.energies[i] - 0.07))
+    def calculate_S_z(self): 
+        #S_z value calculated as inner product of S_z operator and eigenvectors of H
+        S_z_total = []
+        for i in range(len(self.vectors)):
+            S_z_total.append(self.calc_Sz(self.vectors[:,i]))
             
-        tick_spacing = 1
-        if ticks == False: 
-            ax.set_xticks([])
-        else:
-            ax.xaxis.set_major_locator(mpl.ticker.MultipleLocator(tick_spacing))
-        ax.grid(axis='y')
-        ax.margins(0.1)
-        ax.set_xlabel('index')
-        ax.set_ylabel('E')
-        ax.set_title(title)
-        
-        filename = 'bands_'
-        if suffix is not None:
-            filename += suffix
-        plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
-        plt.close()
-        
-    def plot_entropy(self, entropy, color, title, figsize, s, suffix):
-        # plotting - entropia dla odpowiedniej eigenenergii H 
-        #entropy = self.normalization_of_entropy(entropy)
-        
-        fig, ax = plt.subplots(figsize=figsize)
-        ax.scatter(self.energies, entropy, c = color , s=s , marker="_", linewidth=5, zorder=3)
-        ax.grid(axis='y')
-        ax.margins(0.1)
-        start, end = ax.get_ylim()
-        ax.yaxis.set_ticks(np.arange(start, end, 0.05))
-        #ax.set_ylim(bottom= -0.04, top = end-0.05)
-        ax.set_xlabel('Energy')
-        ax.set_ylabel('Entropy')
-        ax.set_title(title)
-        
-        '''
-        ax.text(0.5, 0.5, '$S_z$ = '+str(S_z_total_number),
-        horizontalalignment='center',
-        verticalalignment='center',
-        transform = ax.transAxes)
-        '''
-        
-        filename = 'entropy_'
-        if suffix is not None:
-            filename += suffix
-        plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
-        plt.close()
-        
-    def plot_lambdas_entropy(self, lambdas, color, title, figsize, s, suffix):
-        # plotting -lambdy dla odpowiedniej entropii
-        
-        fig, ax = plt.subplots(figsize=figsize)
-        for i in range(len(lambdas)):
-            l1= ax.scatter([i]*len(lambdas[i]),lambdas[i], c = color , s=s , marker="_", linewidth=5, zorder=3)
-            l2 =ax.scatter(i,sum(lambdas[i]), c = "green" , s=s , marker="_", alpha=.5, linewidth=4, zorder=3)
-        
-        ax.grid(axis='y')
-        start, end = ax.get_ylim()
-        ax.yaxis.set_ticks(np.arange(start, end, 0.05))
-        ax.margins(0.1)
-        ax.set_ylim(bottom=-0.04, top = 1.04)
-        ax.set_xlabel('Number of eigenvector')
-        ax.set_ylabel('energy of $\lambda$')
-        ax.set_title(title)
-        ax.legend((l1, l2), ('$\lambda$', 'Sum of $\lambda$'), loc='upper left', shadow=False)
-        
-        filename = 'lambda_entropy'
-        if suffix is not None:
-            filename += suffix
-        plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
-        plt.close()
-        
-    def plot_s_z(self,s_z_values, color, title, figsize, s, suffix):
-        
-        fig, ax = plt.subplots(figsize=figsize)
-        ax.scatter(s_z_values, self.energies, c = color , s=s , marker="_", alpha = .8, linewidth=8, zorder=3)
-        
-        ax.grid(axis='y')
-        ax.margins(0.1)
-        ax.set_xlabel('$S_z$')
-        ax.set_ylabel('$E$')
-        ax.set_title(title)
-        
-        filename = 's_z_energy'
-        if suffix is not None:
-            filename += suffix
-        plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
-        plt.close()
- 
-def main(N,adjMatrix): #N+1 -> size of graph
-
-    H = Heisenberg(N)
-    energies, vectors = H.diagonalize_Hamiltonian(adjMatrix)
+        return S_z_total
     
-    #S_z total of the System
-    S_z_total = []
-    for i in range(len(vectors)):
-        S_z_total.append(H.calc_Sz(vectors[:,i]))
+    
+class Plots(object):
+        #class for plotting
+        
+        def __init__(self, S, energies, directory = None) -> None:
+            
+            self.energies = energies 
+            
+            if S == 1:
+                self.s_number = 's=1'
+            elif S == 1/2:
+                self.s_number = 's=1_2'
+            
+            if directory is not None:
+                self.directory = os.path.join('./', directory)
+                os.makedirs(directory, exist_ok=True)
+            else:
+                self.directory = './results_'+self.s_number
+  
+        def plot_bands(self, title, figsize, s, ticks, suffix):
+            
+            #Plotting energy bands with index
+            #title -> header of plot, 
+            #figsize -> size of figure, 
+            #s -> thickness of a band 
+            #ticks -> True for showing ticks on x axis 
+            x = list(range(len(self.energies)))
+            #energies_normalized = self.normalization_of_energies(self.energies)
+            fig, ax = plt.subplots(figsize=figsize)
+            ax.scatter(x, self.energies, c = 'black', s=s, marker="_", linewidth=5, zorder=3)
+            tick_spacing = 1
+            if ticks == False: 
+                ax.set_xticks([])
+            else:
+                ax.xaxis.set_major_locator(mpl.ticker.MultipleLocator(tick_spacing))
+            ax.grid(axis='y')
+            ax.margins(0.1)
+            ax.set_xlabel('index')
+            ax.set_ylabel('E')
+            ax.set_title(self.s_number + title)
+            
+            filename = 'bands_'
+            if suffix is not None:
+                filename += suffix
+            plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
+            plt.close()
+            
+            
+        def plot_bands_with_s_z(self, s_z_values, title, figsize, s, ticks, suffix):
+        
+            x = list(range(len(self.energies)))
+            fig, ax = plt.subplots(figsize=figsize)
+            
+            ax.scatter(x, self.energies, c = 'black', s=s, marker="_", linewidth=5, zorder=3)
+            
+            for i, txt in enumerate(s_z_values):
+                ax.annotate(txt, (x[i], self.energies[i]), xytext = (x[i] - 0.2, self.energies[i] + 0.05))
+                ax.annotate("$S_z$", (x[i], self.energies[i]), xytext = (x[i] - 0.2, self.energies[i] - 0.07))
+                
+            tick_spacing = 1
+            if ticks == False: 
+                ax.set_xticks([])
+            else:
+                ax.xaxis.set_major_locator(mpl.ticker.MultipleLocator(tick_spacing))
+            ax.grid(axis='y')
+            ax.margins(0.1)
+            ax.set_xlabel('index')
+            ax.set_ylabel('E')
+            ax.set_title(self.s_number + title)
+            
+            filename = 'bands_'
+            if suffix is not None:
+                filename += suffix
+            plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
+            plt.close()
+            
+        def plot_entropy(self, entropy, color, title, figsize, s, suffix):
+            # plotting - entropia dla odpowiedniej eigenenergii H 
+            #entropy = self.normalization_of_entropy(entropy)
+            
+            fig, ax = plt.subplots(figsize=figsize)
+            ax.scatter(self.energies, entropy, c = color , s=s , marker="_", linewidth=5, zorder=3)
+            ax.grid(axis='y')
+            ax.margins(0.1)
+            start, end = ax.get_ylim()
+            ax.yaxis.set_ticks(np.arange(start, end, 0.05))
+            #ax.set_ylim(bottom= -0.04, top = end-0.05)
+            ax.set_xlabel('Energy')
+            ax.set_ylabel('Entropy')
+            ax.set_title(self.s_number + title)
+            
+            '''
+            ax.text(0.5, 0.5, '$S_z$ = '+str(S_z_total_number),
+            horizontalalignment='center',
+            verticalalignment='center',
+            transform = ax.transAxes)
+            '''
+            
+            filename = 'entropy_'
+            if suffix is not None:
+                filename += suffix
+            plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
+            plt.close()
+            
+        def plot_lambdas_entropy(self, lambdas, color, title, figsize, s, suffix):
+            # plotting -lambdy dla odpowiedniej entropii
+            
+            fig, ax = plt.subplots(figsize=figsize)
+            for i in range(len(lambdas)):
+                l1= ax.scatter([i]*len(lambdas[i]),lambdas[i], c = color , s=s , marker="_", linewidth=5, zorder=3)
+                l2 =ax.scatter(i,sum(lambdas[i]), c = "green" , s=s , marker="_", alpha=.5, linewidth=4, zorder=3)
+            
+            ax.grid(axis='y')
+            start, end = ax.get_ylim()
+            ax.yaxis.set_ticks(np.arange(start, end, 0.05))
+            ax.margins(0.1)
+            ax.set_ylim(bottom=-0.04, top = 1.04)
+            ax.set_xlabel('Number of eigenvector')
+            ax.set_ylabel('energy of $\lambda$')
+            ax.set_title(self.s_number + title)
+            ax.legend((l1, l2), ('$\lambda$', 'Sum of $\lambda$'), loc='upper left', shadow=False)
+            
+            filename = 'lambda_entropy'
+            if suffix is not None:
+                filename += suffix
+            plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
+            plt.close()
+            
+        def plot_s_z(self,s_z_values, color, title, figsize, s, suffix):
+            
+            fig, ax = plt.subplots(figsize=figsize)
+            ax.scatter(s_z_values, self.energies, c = color , s=s , marker="_", alpha = .8, linewidth=8, zorder=3)
+            
+            ax.grid(axis='y')
+            ax.margins(0.1)
+            ax.set_xlabel('$S_z$')
+            ax.set_ylabel('$E$')
+            ax.set_title(self.s_number + title)
+            
+            filename = 's_z_energy'
+            if suffix is not None:
+                filename += suffix
+            plt.savefig(os.path.join(self.directory, filename + '.png'), bbox_inches='tight', dpi=200)
+            plt.close()
+ 
+def main(N, S, adjMatrix): #N+1 -> size of graph
+
+    H = Heisenberg(N, S)
+    
+    #diagonalization of Heisenberg Hamiltonian 
+    energies, vectors = H.diagonalize_Hamiltonian(adjMatrix)
+    #calculation of S_z 
+    S_z_total = H.calculate_S_z()
     
     print("Not rounded S_z: ", S_z_total)
     print("rounded S_z: ", np.around(S_z_total,0))
@@ -430,18 +445,16 @@ def main(N,adjMatrix): #N+1 -> size of graph
     print("vector: ", vectors[:,0])
     print("vector rounded: ", np.around(vectors[:,0],3))
       
-    
-    
+    Plotting = Plots(S, energies)
     #plots of energy bands 
     #H.plot_bands(title = "s=1, " + str(N+1) +" sites, graph", figsize=(10,12),s=100, ticks = False)
-    H.plot_bands(title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"_sites_chain")
-    H.plot_bands_with_s_z(np.around(S_z_total,0), title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
+    Plotting.plot_bands(title = ", " +str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"_sites_chain")
+    Plotting.plot_bands_with_s_z(np.around(S_z_total,0), title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
     
-    H.plot_s_z(S_z_total, color = 'dodgerblue', title = "s=1/2, " + str(N+1) +" sites, graph", figsize=(10,12),s=550, suffix = str(N+1) +"_sites_Sz")
+    Plotting.plot_s_z(S_z_total, color = 'dodgerblue', title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, suffix = str(N+1) +"_sites_Sz")
    
     #basis = H.calculate_basis()
     #print("Our basis is: ", basis)
-    
 
     entropy_all_system = []
     entropy_all_env = []
@@ -449,7 +462,7 @@ def main(N,adjMatrix): #N+1 -> size of graph
     eigen_rho_env_all = []
     eigen_rho_sys_all = []
     
-    n_of_sites = 4
+    n_of_sites = int(len(adjMatrix)/2)
     
     for n in range(len(energies)):
         #print("This is " + str(n) + " eigenvector :", np.around(vectors[:,n],3))
@@ -457,8 +470,8 @@ def main(N,adjMatrix): #N+1 -> size of graph
         
         rho_big= H.calculate_rho(n)
         
-        rho_sys = H.calculate_reduced_rho_sys(rho_big, spin = 1, sites_in_subsystem = n_of_sites)
-        rho_env = H.calculate_reduced_rho_env(rho_big, spin = 1, sites_in_subsystem = n_of_sites)
+        rho_sys = H.calculate_reduced_rho_sys(rho_big, spin = S, sites_in_subsystem = n_of_sites)
+        rho_env = H.calculate_reduced_rho_env(rho_big, spin = S, sites_in_subsystem = n_of_sites)
         
         #rho_2 = H.calculate_reduced_rho_2_spin(rho_sys)
         #rho_env = H.calculate_reduced_rho_2_spin_env(rho_sys)
@@ -483,127 +496,11 @@ def main(N,adjMatrix): #N+1 -> size of graph
     #print("Max entropy: ", max(entropy_all_env))
     #print("List of entropies rounded :", np.around(entropy_all_system,1))
 
-    H.plot_entropy(entropy_all_system, color = 'red', title = "s=1/2, " + str(N+1) +" sites, system ", figsize=(10,12),s=550, suffix = str(N+1) + "_sys_entropy")
-    H.plot_entropy(entropy_all_env, color = 'blue', title = "s=1/2, " + str(N+1) +" sites, environment ", figsize=(10,12),s=550, suffix = str(N+1) + "_env_entropy")
+    Plotting.plot_entropy(entropy_all_system, color = 'red', title = ", " + str(N+1) +" sites, system ", figsize=(10,12),s=550, suffix = str(N+1) + "_sys_entropy")
+    Plotting.plot_entropy(entropy_all_env, color = 'blue', title = ", " + str(N+1) +" sites, environment ", figsize=(10,12),s=550, suffix = str(N+1) + "_env_entropy")
     
-    H.plot_lambdas_entropy(eigen_rho_env_all, color = 'black', title = "lambda, s=1/2, " + str(N+1) +" sites, env ", figsize=(10,12),s=400, suffix = str(N+1) + "_env_lambda")
-    H.plot_lambdas_entropy(eigen_rho_sys_all, color = 'black', title = "lambda, s=1/2, " + str(N+1) +" sites, sys ", figsize=(10,12),s=400, suffix = str(N+1) + "_sys_lambda")
-    
-    
-    
-    '''
-    n = 5
-    
-    rho_big_try = H.calculate_rho(n) 
-    
-    rho_sys=H.calculate_reduced_rho_4_spin_sys(rho_big_try)
-    rho_env=H.calculate_reduced_rho_4_spin_env(rho_big_try)
-    
-    rho_sys_check = H.calculate_reduced_rho_sys(rho_big_try, spin = 1/2, sites_in_subsystem = 2)
-    
-    rho_env_check = H.calculate_reduced_rho_env(rho_big_try, spin = 1/2, sites_in_subsystem = 2)
-    
-    print(rho_sys == rho_sys_check)
-    print(rho_env == rho_env_check)
-    
-    
-    
-    #print(rho_big == rho_big_try)     
-    rho_sys_try = np.zeros((4,4), dtype = complex)
-    for N_try in range(16):
-        for i_try in range(4):
-            for j_try in range(4):
-                rho_sys_try[0][j_try] += rho_big_try[i_try][N_try]
-                rho_sys_try[1][j_try] += rho_big_try[i_try + 4][N_try]
-                rho_sys_try[2][j_try] += rho_big_try[i_try + 8][N_try]
-                rho_sys_try[3][j_try] += rho_big_try[i_try + 12][N_try]
-    
-    rho_big_try = np.zeros((16,16),dtype = complex)
-    rho_sys_try = np.zeros((4,4), dtype = complex)
-    for i in range(4):
-        if i == 0:
-            rho_sys_try[0,i] = rho_big_try[0,0] + rho_big_try[1,1] + rho_big_try[2,2] + rho_big_try[3,3]
-            rho_sys_try[1,i] = rho_big_try[4,0] + rho_big_try[5,1] + rho_big_try[6,2] + rho_big_try[7,3]
-            rho_sys_try[2,i] = rho_big_try[8,0] + rho_big_try[9,1] + rho_big_try[10,2] + rho_big_try[11,3]
-            rho_sys_try[3,i] = rho_big_try[12,0] + rho_big_try[13,1] + rho_big_try[14,2] + rho_big_try[15,3]
-            
-        if i == 1: 
-            j = 4
-            rho_sys_try[0,i] = rho_big_try[0,0+j] + rho_big_try[1,1+j] + rho_big_try[2,2+j] + rho_big_try[3,3+j]
-            rho_sys_try[1,i] = rho_big_try[4,0+j] + rho_big_try[5,1+j] + rho_big_try[6,2+j] + rho_big_try[7,3+j]
-            rho_sys_try[2,i] = rho_big_try[8,0+j] + rho_big_try[9,1+j] + rho_big_try[10,2+j] + rho_big_try[11,3+j]
-            rho_sys_try[3,i] = rho_big_try[12,0+j] + rho_big_try[13,1+j] + rho_big_try[14,2+j] + rho_big_try[15,3+j]
-            
-        if i == 2: 
-            j = 8
-            rho_sys_try[0,i] = rho_big_try[0,0+j] + rho_big_try[1,1+j] + rho_big_try[2,2+j] + rho_big_try[3,3+j]
-            rho_sys_try[1,i] = rho_big_try[4,0+j] + rho_big_try[5,1+j] + rho_big_try[6,2+j] + rho_big_try[7,3+j]
-            rho_sys_try[2,i] = rho_big_try[8,0+j] + rho_big_try[9,1+j] + rho_big_try[10,2+j] + rho_big_try[11,3+j]
-            rho_sys_try[3,i] = rho_big_try[12,0+j] + rho_big_try[13,1+j] + rho_big_try[14,2+j] + rho_big_try[15,3+j]
-            
-        if i == 3: 
-            j = 12
-            rho_sys_try[0,i] = rho_big_try[0,0+j] + rho_big_try[1,1+j] + rho_big_try[2,2+j] + rho_big_try[3,3+j]
-            rho_sys_try[1,i] = rho_big_try[4,0+j] + rho_big_try[5,1+j] + rho_big_try[6,2+j] + rho_big_try[7,3+j]
-            rho_sys_try[2,i] = rho_big_try[8,0+j] + rho_big_try[9,1+j] + rho_big_try[10,2+j] + rho_big_try[11,3+j]
-            rho_sys_try[3,i] = rho_big_try[12,0+j] + rho_big_try[13,1+j] + rho_big_try[14,2+j] + rho_big_try[15,3+j]
-            
-            
-    #env 
-    
-    for i in range(4):
-        if i == 0:
-            rho_env_try[0,i] = rho_big_try[0,0] + rho_big_try[4,4] + rho_big_try[8,8] + rho_big_try[12,12]
-            rho_env_try[1,i] = rho_big_try[1,0] + rho_big_try[5,4] + rho_big_try[9,8] + rho_big_try[13,12]
-            rho_env_try[2,i] = rho_big_try[2,0] + rho_big_try[6,4] + rho_big_try[10,8] + rho_big_try[14,12]
-            rho_env_try[3,i] = rho_big_try[3,0] + rho_big_try[7,4] + rho_big_try[11,8] + rho_big_try[15,12]
-            
-        if i == 1: 
-            j = 1
-            rho_env_try[0,i] = rho_big_try[0,0+j] + rho_big_try[4,4+j] + rho_big_try[8,8+j] + rho_big_try[12,12+j]
-            rho_env_try[1,i] = rho_big_try[1,0+j] + rho_big_try[5,4+j] + rho_big_try[9,8+j] + rho_big_try[13,12+j]
-            rho_env_try[2,i] = rho_big_try[2,0+j] + rho_big_try[6,4+j] + rho_big_try[10,8+j] + rho_big_try[14,12+j]
-            rho_env_try[3,i] = rho_big_try[3,0+j] + rho_big_try[7,4+j] + rho_big_try[11,8+j] + rho_big_try[15,12+j]
-            
-        if i == 2: 
-            j = 2
-            rho_env_try[0,i] = rho_big_try[0,0+j] + rho_big_try[4,4+j] + rho_big_try[8,8+j] + rho_big_try[12,12+j]
-            rho_env_try[1,i] = rho_big_try[1,0+j] + rho_big_try[5,4+j] + rho_big_try[9,8+j] + rho_big_try[13,12+j]
-            rho_env_try[2,i] = rho_big_try[2,0+j] + rho_big_try[6,4+j] + rho_big_try[10,8+j] + rho_big_try[14,12+j]
-            rho_env_try[3,i] = rho_big_try[3,0+j] + rho_big_try[7,4+j] + rho_big_try[11,8+j] + rho_big_try[15,12+j]
-            
-        if i == 3: 
-            j = 3
-            rho_env_try[0,i] = rho_big_try[0,0+j] + rho_big_try[4,4+j] + rho_big_try[8,8+j] + rho_big_try[12,12+j]
-            rho_env_try[1,i] = rho_big_try[1,0+j] + rho_big_try[5,4+j] + rho_big_try[9,8+j] + rho_big_try[13,12+j]
-            rho_env_try[2,i] = rho_big_try[2,0+j] + rho_big_try[6,4+j] + rho_big_try[10,8+j] + rho_big_try[14,12+j]
-            rho_env_try[3,i] = rho_big_try[3,0+j] + rho_big_try[7,4+j] + rho_big_try[11,8+j] + rho_big_try[15,12+j]
-            
-    rho_sys_try = np.zeros((4,4), dtype = complex)
-    rho_env_try = np.zeros((4,4), dtype = complex)
-
-    
-    #system 
-    for i in range(4):
-        j = i * 4
-        for k in range(4):
-            rho_sys_try[k, i] = sum(rho_big_try[k * 4 + l, j + l] for l in range(4))
-        
-    #env   
-    for i in range(4):
-        for j in range(4):
-            rho_env_try[j,i] = sum(rho_big_try[j + l * 4 ,i + l * 4] for l in range(4))
-            
-            
-    
-    print("Its manual: \n", rho_sys)
-    print("\n")
-    print("It's loop version: \n", rho_sys_try)
-    
-    print(rho_sys == rho_sys_try)
-    print("\n")
-    print(rho_env == rho_env_try)
-    '''
+    Plotting.plot_lambdas_entropy(eigen_rho_env_all, color = 'black', title = ", lambda, " + str(N+1) +" sites, env ", figsize=(10,12),s=400, suffix = str(N+1) + "_env_lambda")
+    Plotting.plot_lambdas_entropy(eigen_rho_sys_all, color = 'black', title = ", lambda, " + str(N+1) +" sites, sys ", figsize=(10,12),s=400, suffix = str(N+1) + "_sys_lambda")
 
 if __name__ == '__main__':
 
@@ -626,12 +523,11 @@ if __name__ == '__main__':
     adjMatrix = g.adjMatrix
     print(adjMatrix)
     '''
-    #adjMatrix = np.array([[0,1,0,0,0,0,0],[0,0,1,0,0,0,0],[0,0,0,1,0,0,0],[0,0,0,0,1,0,0],[0,0,0,0,0,1,0],[0,0,0,0,0,0,1],[1,0,0,0,0,0,0]])
     
     #in this code it's enough to define one "hopping", becasue the second one is already implemented in the code
     # correct above note! 
     #4 sites closed
-    #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
+    adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
     
     #4 sites open
     #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0]])
@@ -640,8 +536,8 @@ if __name__ == '__main__':
     #adjMatrix = np.array([[0,1,0,0,0,0],[0,0,1,0,0,0],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1],[1,0,0,0,0,0]])
     
     #8 sites
-    adjMatrix = np.eye(8, k=1, dtype=int)[::]
-    adjMatrix[-1][0] = 1
+    #adjMatrix = np.eye(8, k=1, dtype=int)[::]
+    #adjMatrix[-1][0] = 1
     
     #10 sites
     #adjMatrix = np.eye(10, k=1, dtype=int)[::]
@@ -651,8 +547,7 @@ if __name__ == '__main__':
     #adjMatrix = np.eye(12, k=1, dtype=int)[::]
     #adjMatrix[-1][0] = 1
     
-    #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0]])
-    
-    main(len(adjMatrix) - 1, adjMatrix)
+    S = 1/2
+    main(len(adjMatrix) - 1, S, adjMatrix)
     print("Success")
 
