@@ -432,11 +432,15 @@ class Plots(object):
 def main(N, S, adjMatrix): #N+1 -> size of graph
 
     H = Heisenberg(N, S)
+    print("Start the diagonalization")
     
     #diagonalization of Heisenberg Hamiltonian 
     energies, vectors = H.diagonalize_Hamiltonian(adjMatrix)
+    print("Diagonalization of Hamiltonian done")
+    
     #calculation of S_z 
     S_z_total = H.calculate_S_z()
+    print("S_z calculation done")
     
     print("Not rounded S_z: ", S_z_total)
     print("rounded S_z: ", np.around(S_z_total,0))
@@ -444,15 +448,17 @@ def main(N, S, adjMatrix): #N+1 -> size of graph
     print("energy: ", energies[0])
     print("vector: ", vectors[:,0])
     print("vector rounded: ", np.around(vectors[:,0],3))
-      
-    Plotting = Plots(S, energies)
+    
+    print("Start plotting of bands")
+    Plotting = Plots(S, energies, directory = "results_check")
     #plots of energy bands 
     #H.plot_bands(title = "s=1, " + str(N+1) +" sites, graph", figsize=(10,12),s=100, ticks = False)
-    Plotting.plot_bands(title = ", " +str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"_sites_chain")
-    Plotting.plot_bands_with_s_z(np.around(S_z_total,0), title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
+    #Plotting.plot_bands(title = ", " +str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"_sites_chain")
+    #Plotting.plot_bands_with_s_z(np.around(S_z_total,0), title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
     
-    Plotting.plot_s_z(S_z_total, color = 'dodgerblue', title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, suffix = str(N+1) +"_sites_Sz")
-   
+    #Plotting.plot_s_z(S_z_total, color = 'dodgerblue', title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, suffix = str(N+1) +"_sites_Sz")
+    print("Plotting of bands done")
+    
     #basis = H.calculate_basis()
     #print("Our basis is: ", basis)
 
@@ -464,6 +470,7 @@ def main(N, S, adjMatrix): #N+1 -> size of graph
     
     n_of_sites = int(len(adjMatrix)/2)
     
+    print("Entropy start")
     for n in range(len(energies)):
         #print("This is " + str(n) + " eigenvector :", np.around(vectors[:,n],3))
         #print("This is " + str(n) + " S_z of the eigenvector :", np.around(S_z_total[n],1))
@@ -491,7 +498,8 @@ def main(N, S, adjMatrix): #N+1 -> size of graph
         entropy_all_env.append(entropy_env)
         #for lambdas from reduced density matrices
         eigen_rho_env_all.append(eigen_rho_env)
-    
+        
+    print("Entropy plotting")
     #print("List of entropies :", entropy_all_system)
     #print("Max entropy: ", max(entropy_all_env))
     #print("List of entropies rounded :", np.around(entropy_all_system,1))
@@ -527,13 +535,13 @@ if __name__ == '__main__':
     #in this code it's enough to define one "hopping", becasue the second one is already implemented in the code
     # correct above note! 
     #4 sites closed
-    adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
+    #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
     
     #4 sites open
     #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0]])
     
     #6 sites
-    #adjMatrix = np.array([[0,1,0,0,0,0],[0,0,1,0,0,0],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1],[1,0,0,0,0,0]])
+    adjMatrix = np.array([[0,1,0,0,0,0],[0,0,1,0,0,0],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1],[1,0,0,0,0,0]])
     
     #8 sites
     #adjMatrix = np.eye(8, k=1, dtype=int)[::]
