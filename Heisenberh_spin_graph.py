@@ -11,6 +11,7 @@ from functools import reduce
 from itertools import chain, product, repeat
 from scipy.linalg import logm
 import os 
+from matplotlib.ticker import AutoMinorLocator, AutoLocator, LinearLocator, MaxNLocator
 
 
 class Graph(object):
@@ -78,7 +79,7 @@ class Heisenberg(object):
             self.S_minus = np.array([[0,0],
                                     [1,0]])
         
-            self.S_z = 1/2* np.array([[1,0],
+            self.S_z = 1/2 * np.array([[1,0],
                                     [0,-1]])
             self.I = np.array([[1,0],
                                 [0,1]])
@@ -93,16 +94,29 @@ class Heisenberg(object):
     def S_z_operator(self):
         #calculating S_z operator as sum S_z_1 + S_z_2 + ... + S_z_N
         S_z_operator = 0
+        #print(self.S_z)
         for i in range(self.size_of_system+1):
             S_z_operator  += self.S_site(i, self.S_z)
-            
+        
+        #print(S_z_operator)
         return S_z_operator
         
     def calc_Sz(self, eigenvector):
         # Calculate the conjugate transpose of the eigenvector
-        psi_dagger = np.conj(eigenvector.T)
+        
+        eigen_dagger = np.conj(eigenvector.T)
+        #print(eigenvector)
+        #print(eigen_dagger)
+        
         # Calculate the expectation value of S_z
-        Sz_total = np.dot(psi_dagger, np.dot(self.S_z_operator(), eigenvector))
+        Sz_total = np.dot(eigen_dagger, np.dot(self.S_z_operator(), eigenvector))
+        
+        #Sz_total = np.inner(eigen_dagger, np.matmul(self.S_z_operator(), eigenvector))
+        
+        #rho =  np.outer(eigenvector, np.conj(eigenvector))
+        #Sz_total = np.trace(rho*self.S_z_operator())
+        
+        #Sz_total = np.dot(psi_dagger, eigenvector)
         return Sz_total
     
     def eig_diagonalize(self,A):
@@ -123,7 +137,10 @@ class Heisenberg(object):
                     self.H += 1/2 * (np.dot(self.S_site(j, self.S_plus),self.S_site(i, self.S_minus)) \
                     + np.dot(self.S_site(j, self.S_minus),self.S_site(i, self.S_plus))) \
                     + np.dot(self.S_site(j, self.S_z), self.S_site(i, self.S_z))
-                    
+        
+        for i in range(len(self.H)):
+                self.H[i][i] += np.random.random()*10e-8
+                
         self.energies, self.vectors = self.eig_diagonalize(self.H)
         print("Len of Hamiltonian: ", len(self.H))
         return self.energies, self.vectors
@@ -264,16 +281,20 @@ class Heisenberg(object):
     def calculate_entropy(self,rho_reduced,n):
         #n - number of spins in the subsystem
         eigen_rho, vectors = self.eig_diagonalize(rho_reduced)  
-        entropy = -sum(eigen_rho*np.log(eigen_rho, where=0<eigen_rho, out=0.0*eigen_rho))
-        '''
+        #entropy = -sum(eigen_rho*np.log(eigen_rho, where=0<eigen_rho, out=0.0*eigen_rho))
+        
         entropy = 0
         for i in range(len(eigen_rho)):
-            print(eigen_rho[i])
-            if eigen_rho[i] <= 0.0:
+            #print(eigen_rho[i])
+            if eigen_rho[i] <= 10e-8:
                 entropy += 0.0
+                
+            elif eigen_rho[i] == 1.0:
+                entropy += 0.0
+                
             else:
                 entropy += -(eigen_rho[i]*np.log(eigen_rho[i]))
-        '''
+        
         return entropy/(n*np.log(n)), eigen_rho
     
     def calculate_S_z(self): 
@@ -301,7 +322,7 @@ class Plots(object):
                 self.directory = os.path.join('./', directory)
                 os.makedirs(directory, exist_ok=True)
             else:
-                self.directory = './results_'+self.s_number
+                self.directory = './results/results_'+self.s_number
   
         def plot_bands(self, title, figsize, s, ticks, suffix):
             
@@ -368,9 +389,11 @@ class Plots(object):
             ax.scatter(self.energies, entropy, c = color , s=s , marker="_", linewidth=5, zorder=3)
             ax.grid(axis='y')
             ax.margins(0.1)
-            start, end = ax.get_ylim()
-            ax.yaxis.set_ticks(np.arange(start, end, 0.05))
-            #ax.set_ylim(bottom= -0.04, top = end-0.05)
+            #start, end = ax.get_ylim()
+            #ax.yaxis.set_ticks(np.arange(min(entropy), max(entropy)+1, 0.5))
+            #ax.yaxis.set_major_locator(MaxNLocator())
+            ax.yaxis.set_minor_locator(AutoMinorLocator())
+            
             ax.set_xlabel('Energy')
             ax.set_ylabel('Entropy')
             ax.set_title(self.s_number + title)
@@ -445,18 +468,18 @@ def main(N, S, adjMatrix): #N+1 -> size of graph
     print("Not rounded S_z: ", S_z_total)
     print("rounded S_z: ", np.around(S_z_total,0))
     print("sum rounded S_z: ", sum(np.around(S_z_total,0)))
-    print("energy: ", energies[0])
-    print("vector: ", vectors[:,0])
-    print("vector rounded: ", np.around(vectors[:,0],3))
+    #print("energy: ", energies[0])
+    #print("vector: ", vectors[:,0])
+    #print("vector rounded: ", np.around(vectors[:,0],3))
     
     print("Start plotting of bands")
-    Plotting = Plots(S, energies, directory = "results_check")
+    Plotting = Plots(S, energies)
     #plots of energy bands 
     #H.plot_bands(title = "s=1, " + str(N+1) +" sites, graph", figsize=(10,12),s=100, ticks = False)
-    #Plotting.plot_bands(title = ", " +str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"_sites_chain")
+    Plotting.plot_bands(title = ", " +str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"_sites_chain")
     #Plotting.plot_bands_with_s_z(np.around(S_z_total,0), title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, ticks = True, suffix = str(N+1) +"S_z_sites_chain")
     
-    #Plotting.plot_s_z(S_z_total, color = 'dodgerblue', title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, suffix = str(N+1) +"_sites_Sz")
+    Plotting.plot_s_z(S_z_total, color = 'dodgerblue', title = ", " + str(N+1) +" sites, graph", figsize=(10,12),s=550, suffix = str(N+1) +"_sites_Sz")
     print("Plotting of bands done")
     
     #basis = H.calculate_basis()
@@ -472,14 +495,15 @@ def main(N, S, adjMatrix): #N+1 -> size of graph
     
     print("Entropy start")
     for n in range(len(energies)):
-        #print("This is " + str(n) + " eigenvector :", np.around(vectors[:,n],3))
-        #print("This is " + str(n) + " S_z of the eigenvector :", np.around(S_z_total[n],1))
+        print("This is " + str(n) + " eigenvector :", np.around(vectors[:,n],3))
+        print("This is " + str(n) + " S_z of the eigenvector :", np.around(S_z_total[n],1))
         
         rho_big= H.calculate_rho(n)
         
         rho_sys = H.calculate_reduced_rho_sys(rho_big, spin = S, sites_in_subsystem = n_of_sites)
         rho_env = H.calculate_reduced_rho_env(rho_big, spin = S, sites_in_subsystem = n_of_sites)
         
+        print(np.around(rho_sys,4))
         #rho_2 = H.calculate_reduced_rho_2_spin(rho_sys)
         #rho_env = H.calculate_reduced_rho_2_spin_env(rho_sys)
         #rho_sys = H.calculate_reduced_rho_4_spin_sys(rho_big)
@@ -490,6 +514,7 @@ def main(N, S, adjMatrix): #N+1 -> size of graph
             print("Trace of the env: ", np.trace(rho_env))
             
         entropy_sys, eigen_rho_sys = H.calculate_entropy(rho_sys, n_of_sites)
+        print("This is entropy of this energy: ", entropy_sys)
         entropy_all_system.append(entropy_sys)
         #for lambdas from reduced density matrices
         eigen_rho_sys_all.append(eigen_rho_sys)
@@ -534,8 +559,15 @@ if __name__ == '__main__':
     
     #in this code it's enough to define one "hopping", becasue the second one is already implemented in the code
     # correct above note! 
+    
+    #2 sites closed
+    #adjMatrix = np.array([[0,1,],[1,0]])
+    
+    #3 sites closed
+    #adjMatrix = np.array([[0,1,0],[0,0,1],[1,0,0]])
+    
     #4 sites closed
-    #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
+    adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0]])
     
     #4 sites open
     #adjMatrix = np.array([[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0]])
@@ -555,6 +587,7 @@ if __name__ == '__main__':
     #adjMatrix = np.eye(12, k=1, dtype=int)[::]
     #adjMatrix[-1][0] = 1
     
+    print("Calculating N = " +str(len(adjMatrix)) + " system")
     S = 1/2
     main(len(adjMatrix) - 1, S, adjMatrix)
     print("Success")
